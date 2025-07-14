@@ -10,7 +10,7 @@ Imports PdfSharp.Fonts
 Imports PdfSharp.Pdf
 
 Module Program
-    Private Const LinesPerPage As Integer = 65
+    Private Const LinesPerPage As Integer = 66
     Private lines As New List(Of String)()
     Private buffer As New StringBuilder()
     Private lineCount As Integer = 0
