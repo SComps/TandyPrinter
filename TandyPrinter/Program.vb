@@ -43,7 +43,7 @@ Module Program
         GlobalFontSettings.FontResolver = New FileFontResolver(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Fonts", "lineprinter.ttf"))
 
         AddHandler Console.CancelKeyPress, AddressOf Console_CancelKeyPress
-        Console.WriteLine("Press Ctrl+C to exit. Press F1 to force a page break.")
+        Console.WriteLine("Press Ctrl+C to exit. Press F1=Form Feed, F2=Line Feed")
 
         Dim keyTask = Task.Run(AddressOf KeyListenerLoop)
         MainAsync(cts.Token).GetAwaiter().GetResult()
@@ -64,6 +64,10 @@ Module Program
                 Dim key = Console.ReadKey(intercept:=True)
                 If key.Key = ConsoleKey.F1 Then
                     forcePageBreakRequested = True
+                    ForceBreak()
+                End If
+                If key.Key = ConsoleKey.F2 Then
+                    ForceLineFeed()
                 End If
             Else
                 Thread.Sleep(50)
@@ -71,6 +75,29 @@ Module Program
         End While
     End Sub
 
+    Private Async Sub ForceBreak()
+        If (forcePageBreakRequested) Then
+            Console.WriteLine(New String("-"c, 30) & " PAGE BREAK " & New String("-"c, 30))
+            forcePageBreakRequested = False
+            Await SavePdfPageAsync()
+            currentPdfPageLines.Clear()
+        End If
+    End Sub
+
+    Private Sub ForceLineFeed()
+        lines.Add("")
+        Dim displayLine = ""
+        Dim pageLineNum As Integer = (lineCount Mod LinesPerPage) + 1
+        Console.WriteLine($"*[{pageLineNum,2}] {displayLine}")
+        currentPdfPageLines.Add(displayLine)
+        If pageLineNum >= LinesPerPage Then
+            forcePageBreakRequested = True
+            ForceBreak()
+        Else
+            'Console.WriteLine($"Not doing a BREAK line {pageLineNum}")
+        End If
+        lineCount += 1
+    End Sub
     Async Function MainAsync(token As CancellationToken) As Task
         Try
             Dim listener As New TcpListener(listenIp, listenPort)
@@ -127,7 +154,7 @@ Module Program
                                     lineCount += 1
                                     buffer.Clear()
 
-                                    If pageLineNum = LinesPerPage OrElse forcePageBreakRequested Then
+                                    If (pageLineNum >= LinesPerPage) Then
                                         Console.WriteLine(New String("-"c, 30) & " PAGE BREAK " & New String("-"c, 30))
                                         forcePageBreakRequested = False
                                         Await SavePdfPageAsync()
